@@ -8,7 +8,6 @@ const { Builder, By, Key, until, Actions } = pkg;
 import { Options as ChromeOptions } from 'selenium-webdriver/chrome.js';
 import { Options as FirefoxOptions } from 'selenium-webdriver/firefox.js';
 
-
 // Create an MCP server
 const server = new McpServer({
     name: "MCP Selenium",
@@ -31,15 +30,20 @@ const getDriver = () => {
 };
 
 const getLocator = (by, value) => {
-    switch (by.toLowerCase()) {
-        case 'id': return By.id(value);
-        case 'css': return By.css(value);
-        case 'xpath': return By.xpath(value);
-        case 'name': return By.name(value);
-        case 'tag': return By.css(value);
-        case 'class': return By.className(value);
-        default: throw new Error(`Unsupported locator strategy: ${by}`);
+    const locators = {
+        'id': By.id,
+        'css': By.css,
+        'xpath': By.xpath,
+        'name': By.name,
+        'tag': By.css,
+        'class': By.className
+    };
+
+    const locatorFunction = locators[by.toLowerCase()];
+    if (!locatorFunction) {
+        throw new Error(`Unsupported locator strategy: ${by}`);
     }
+    return locatorFunction(value);
 };
 
 // Common schemas
@@ -64,7 +68,7 @@ server.tool(
     },
     async ({ browser, options = {} }) => {
         try {
-            let builder = new Builder();
+            const builder = new Builder();
             let driver;
 
             if (browser === 'chrome') {
@@ -75,7 +79,6 @@ server.tool(
                 if (options.arguments) {
                     options.arguments.forEach(arg => chromeOptions.addArguments(arg));
                 }
-                
                 driver = await builder
                     .forBrowser('chrome')
                     .setChromeOptions(chromeOptions)
@@ -88,7 +91,6 @@ server.tool(
                 if (options.arguments) {
                     options.arguments.forEach(arg => firefoxOptions.addArguments(arg));
                 }
-                
                 driver = await builder
                     .forBrowser('firefox')
                     .setFirefoxOptions(firefoxOptions)
@@ -105,28 +107,6 @@ server.tool(
         } catch (e) {
             return {
                 content: [{ type: 'text', text: `Error starting browser: ${e.message}` }]
-            };
-        }
-    }
-);
-
-server.tool(
-    "navigate",
-    "navigates to a URL",
-    {
-        url: z.string().describe("URL to navigate to")
-        
-    },
-    async ({ url }) => {
-        try {
-            const driver = getDriver();
-            await driver.get(url);
-            return {
-                content: [{ type: 'text', text: `Navigated to ${url}` }]
-            };
-        } catch (e) {
-            return {
-                content: [{ type: 'text', text: `Error navigating: ${e.message}` }]
             };
         }
     }
